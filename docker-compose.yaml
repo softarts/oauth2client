@@ -1,0 +1,29 @@
+version: '3.8'
+services:
+  keycloak:
+    image: jboss/keycloak
+    restart: always
+    environment:
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: admin
+    ports:
+      - "8080:8080"
+    networks:
+      backend:
+        aliases:
+          - "keycloak"
+    volumes:
+      #- keycloak_data:/data
+      - keycloak_standalone_data:/opt/jboss/keycloak/standalone/data/
+      - keycloak_data:/opt/keycloak/data/
+
+volumes:
+  db:
+    driver: local
+  keycloak_data:
+  keycloak_standalone_data:
+
+
+networks:
+  backend:
+    driver: bridge

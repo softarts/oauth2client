@@ -1,0 +1,38 @@
+---
+base.url: http://localhost:8081
+environment: ${ENVIRONMENT:local}
+service.name: oauth2client
+server:
+  port: 8081
+
+spring:
+  main.banner-mode: "off"
+  profiles.active: ${PROFILES_ACTIVE:message-debug-logging}
+
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: 1043125932604-sq96atrmiserm85fds8apsimbpgg40dv.apps.googleusercontent.com
+            client-secret: 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
+
+          facebook:
+            client-id: your_facebook_id
+            client-secret: your_facebook_secret
+
+          mykeycloak:
+            client-id: login-app
+            authorization-grant-type: authorization_code
+            scope: openid
+            redirectUri: http://localhost:8081/login/oauth2/code/mykeycloak
+
+        provider:
+          mykeycloak:
+
+            user-name-attribute: preferred_username
+            jwk-set-uri: http://localhost:8080/auth/realms/SpringBootKeycloak/protocol/openid-connect/certs
+            authorization-uri: http://localhost:8080/auth/realms/SpringBootKeycloak/protocol/openid-connect/auth
+            token-uri: http://localhost:8080/auth/realms/SpringBootKeycloak/protocol/openid-connect/token
+            user-info-uri: http://localhost:8080/auth/realms/SpringBootKeycloak/protocol/openid-connect/userinfo
+            #issuer-uri: http://localhost:8080/auth/realms/SpringBootKeycloak
