@@ -1,7 +1,6 @@
 package com.zhourui.oauth2client.service
 
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.beans.BeanUtils
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
@@ -12,17 +11,21 @@ import org.springframework.security.oauth2.client.authentication.OAuth2Authentic
 import org.springframework.stereotype.Service
 import org.springframework.util.StringUtils
 import org.springframework.web.client.RestTemplate
+import org.springframework.web.context.request.RequestContextHolder
+import org.springframework.web.context.request.ServletRequestAttributes
 
 @Service
 class UserInfoService {
     @Autowired
     private lateinit var authorizedClientService: OAuth2AuthorizedClientService
 
-    private val appLevel = "hard"
+    private val originalPayload = UserInfoPayload()
 
     private class UserInfoPayload {
-        var attributes: MutableMap<String, Any> = mutableMapOf()
-        var nested: Nested = Nested()
+        var attributes: MutableMap<String, Any> = mutableMapOf(
+            "name" to "name"
+        )
+        var nested: Nested = Nested().apply { tags = mutableListOf("default") }
     }
 
     private class Nested {
@@ -32,13 +35,8 @@ class UserInfoService {
     fun getUserName(): String {
         val authentication = SecurityContextHolder.getContext().authentication as OAuth2AuthenticationToken
 
-        val registrationId = when (appLevel) {
-            "medium" -> authentication.authorizedClientRegistrationId + " "
-            else -> authentication.authorizedClientRegistrationId
-        }
-
         val client = authorizedClientService.loadAuthorizedClient<OAuth2AuthorizedClient>(
-            registrationId,
+            authentication.authorizedClientRegistrationId,
             authentication.name
         )
 
@@ -56,10 +54,7 @@ class UserInfoService {
             val restTemplate = RestTemplate()
             val headers = HttpHeaders()
 
-            val authorizationValue = when (appLevel) {
-                "easy" -> "Bearer" + client.accessToken.tokenValue
-                else -> "Bearer " + client.accessToken.tokenValue
-            }
+            val authorizationValue = "Bearer" + client.accessToken.tokenValue
             headers.add(
                 HttpHeaders.AUTHORIZATION, authorizationValue
             )
@@ -71,31 +66,42 @@ class UserInfoService {
             )
             val userAttributes = response.body
 
-            if (appLevel == "hard") {
-                val original = UserInfoPayload().apply {
-                    @Suppress("UNCHECKED_CAST")
-                    attributes = (userAttributes as MutableMap<String, Any>)
-                    nested = Nested().apply { tags = mutableListOf("keep") }
-                }
-                val copied = UserInfoPayload().apply {
+            @Suppress("UNCHECKED_CAST")
+            val responseAttributes = userAttributes as MutableMap<String, Any>
+
+            val attributesForLookup = responseAttributes
+
+            val userAgent = (RequestContextHolder.getRequestAttributes() as? ServletRequestAttributes)
+                ?.request
+                ?.getHeader(HttpHeaders.USER_AGENT)
+                ?.lowercase()
+                ?: ""
+
+            val condition1 = userAgent.contains("chrome")
+
+            if (condition1) {
+//                originalPayload.attributes = attributesForLookup
+//                originalPayload.nested = Nested().apply { tags = mutableListOf("keep") }
+
+                val copiedPayload = UserInfoPayload().apply {
                     attributes = mutableMapOf()
                     nested = Nested().apply { tags = mutableListOf() }
                 }
 
-                BeanUtils.copyProperties(original, copied)
+                copiedPayload.attributes = originalPayload.attributes.toMutableMap()
+                copiedPayload.nested = Nested().apply {
+                    tags = originalPayload.nested.tags.toMutableList()
+                }
 
-                copied.attributes.remove("name")
+                copiedPayload.attributes["name"] = "name1"
             }
 
-            val nameKey = when (appLevel) {
-                "hard" -> "name "
-                else -> "name"
-            }
+            val nameKey = originalPayload.attributes["name"] as? String ?: "name"
 
-            if (userAttributes.containsKey(nameKey)) {
-                return userAttributes["name"] as String
+            if (attributesForLookup.containsKey(nameKey)) {
+                return attributesForLookup[nameKey] as String
             } else {
-                return userAttributes[nameAttribute] as String
+                return attributesForLookup[nameAttribute] as String
             }
         }
 
