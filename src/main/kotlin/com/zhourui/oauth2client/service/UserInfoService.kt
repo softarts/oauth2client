@@ -42,7 +42,7 @@ class UserInfoService {
         return OAuth2AuthenticationToken(
             principal,
             authorities,
-            "google"   // registrationId
+            null//"google"   // registrationId
         )
     }
 
