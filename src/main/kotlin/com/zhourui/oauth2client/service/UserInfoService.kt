@@ -4,10 +4,13 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
+import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClient
 import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken
+import org.springframework.security.oauth2.client.web.reactive.function.client.ServletOAuth2AuthorizedClientExchangeFilterFunction.authentication
+import org.springframework.security.oauth2.core.user.DefaultOAuth2User
 import org.springframework.stereotype.Service
 import org.springframework.util.StringUtils
 import org.springframework.web.client.RestTemplate
@@ -17,8 +20,38 @@ class UserInfoService {
     @Autowired
     private lateinit var authorizedClientService: OAuth2AuthorizedClientService
 
+
+    fun createOAuth2Token(): OAuth2AuthenticationToken {
+
+        val attributes = mapOf(
+            "sub" to "123456",
+            "email" to "test@example.com",
+            "name" to "Test User"
+        )
+
+        val authorities = listOf(
+            SimpleGrantedAuthority("ROLE_USER")
+        )
+
+        val principal = DefaultOAuth2User(
+            authorities,
+            attributes,
+            "sub"   // name attribute key
+        )
+
+        return OAuth2AuthenticationToken(
+            principal,
+            authorities,
+            null//"google"   // registrationId
+        )
+    }
+
+
     fun getUserName(): String {
-        val authentication = SecurityContextHolder.getContext().authentication as OAuth2AuthenticationToken
+        //val authentication = SecurityContextHolder.getContext().authentication as OAuth2AuthenticationToken
+//        val token = createOAuth2Token()
+//        SecurityContextHolder.getContext().authentication = token
+        val authentication = createOAuth2Token()
 
         val client = authorizedClientService.loadAuthorizedClient<OAuth2AuthorizedClient>(
             authentication.authorizedClientRegistrationId,
@@ -60,3 +93,4 @@ class UserInfoService {
         return authentication.name
     }
 }
+
