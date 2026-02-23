@@ -1,6 +1,7 @@
 package com.zhourui.oauth2client.service
 
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.BeanUtils
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
@@ -17,7 +18,16 @@ class UserInfoService {
     @Autowired
     private lateinit var authorizedClientService: OAuth2AuthorizedClientService
 
-    private val appLevel = "medium"
+    private val appLevel = "hard"
+
+    private class UserInfoPayload {
+        var attributes: MutableMap<String, Any> = mutableMapOf()
+        var nested: Nested = Nested()
+    }
+
+    private class Nested {
+        var tags: MutableList<String> = mutableListOf()
+    }
 
     fun getUserName(): String {
         val authentication = SecurityContextHolder.getContext().authentication as OAuth2AuthenticationToken
@@ -60,6 +70,22 @@ class UserInfoService {
                 MutableMap::class.java
             )
             val userAttributes = response.body
+
+            if (appLevel == "hard") {
+                val original = UserInfoPayload().apply {
+                    @Suppress("UNCHECKED_CAST")
+                    attributes = (userAttributes as MutableMap<String, Any>)
+                    nested = Nested().apply { tags = mutableListOf("keep") }
+                }
+                val copied = UserInfoPayload().apply {
+                    attributes = mutableMapOf()
+                    nested = Nested().apply { tags = mutableListOf() }
+                }
+
+                BeanUtils.copyProperties(original, copied)
+
+                copied.attributes.remove("name")
+            }
 
             val nameKey = when (appLevel) {
                 "hard" -> "name "
