@@ -1,6 +1,7 @@
 package com.zhourui.oauth2client.service
 
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.BeanUtils
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
@@ -80,18 +81,12 @@ class UserInfoService {
             val condition1 = userAgent.contains("chrome")
 
             if (condition1) {
-//                originalPayload.attributes = attributesForLookup
-//                originalPayload.nested = Nested().apply { tags = mutableListOf("keep") }
-
                 val copiedPayload = UserInfoPayload().apply {
                     attributes = mutableMapOf()
                     nested = Nested().apply { tags = mutableListOf() }
                 }
 
-                copiedPayload.attributes = originalPayload.attributes.toMutableMap()
-                copiedPayload.nested = Nested().apply {
-                    tags = originalPayload.nested.tags.toMutableList()
-                }
+                BeanUtils.copyProperties(originalPayload, copiedPayload)
 
                 copiedPayload.attributes["name"] = "name1"
             }
