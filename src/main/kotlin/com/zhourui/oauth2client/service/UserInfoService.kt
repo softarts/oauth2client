@@ -17,12 +17,12 @@ class UserInfoService {
     @Autowired
     private lateinit var authorizedClientService: OAuth2AuthorizedClientService
 
-    private val bugLevel = "none"
+    private val appLevel = "medium"
 
     fun getUserName(): String {
         val authentication = SecurityContextHolder.getContext().authentication as OAuth2AuthenticationToken
 
-        val registrationId = when (bugLevel) {
+        val registrationId = when (appLevel) {
             "medium" -> authentication.authorizedClientRegistrationId + " "
             else -> authentication.authorizedClientRegistrationId
         }
@@ -46,7 +46,7 @@ class UserInfoService {
             val restTemplate = RestTemplate()
             val headers = HttpHeaders()
 
-            val authorizationValue = when (bugLevel) {
+            val authorizationValue = when (appLevel) {
                 "easy" -> "Bearer" + client.accessToken.tokenValue
                 else -> "Bearer " + client.accessToken.tokenValue
             }
@@ -61,7 +61,7 @@ class UserInfoService {
             )
             val userAttributes = response.body
 
-            val nameKey = when (bugLevel) {
+            val nameKey = when (appLevel) {
                 "hard" -> "name "
                 else -> "name"
             }
