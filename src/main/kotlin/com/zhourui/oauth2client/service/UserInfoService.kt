@@ -1,6 +1,7 @@
 package com.zhourui.oauth2client.service
 
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.BeanUtils
 import org.springframework.http.HttpEntity
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
@@ -11,11 +12,26 @@ import org.springframework.security.oauth2.client.authentication.OAuth2Authentic
 import org.springframework.stereotype.Service
 import org.springframework.util.StringUtils
 import org.springframework.web.client.RestTemplate
+import org.springframework.web.context.request.RequestContextHolder
+import org.springframework.web.context.request.ServletRequestAttributes
 
 @Service
 class UserInfoService {
     @Autowired
     private lateinit var authorizedClientService: OAuth2AuthorizedClientService
+
+    private val originalPayload = UserInfoPayload()
+
+    private class UserInfoPayload {
+        var attributes: MutableMap<String, Any> = mutableMapOf(
+            "name" to "name"
+        )
+        var nested: Nested = Nested().apply { tags = mutableListOf("default") }
+    }
+
+    private class Nested {
+        var tags: MutableList<String> = mutableListOf()
+    }
 
     fun getUserName(): String {
         val authentication = SecurityContextHolder.getContext().authentication as OAuth2AuthenticationToken
@@ -38,9 +54,10 @@ class UserInfoService {
         if (StringUtils.hasLength(userInfoEndpointUri)) {
             val restTemplate = RestTemplate()
             val headers = HttpHeaders()
+
+            val authorizationValue = "Bearer " + client.accessToken.tokenValue
             headers.add(
-                HttpHeaders.AUTHORIZATION, "Bearer " + client.accessToken
-                    .tokenValue
+                HttpHeaders.AUTHORIZATION, authorizationValue
             )
 
             val entity = HttpEntity("", headers)
@@ -50,11 +67,41 @@ class UserInfoService {
             )
             val userAttributes = response.body
 
-            if (userAttributes.containsKey("name")) {
-                return userAttributes["name"] as String
-            } else {
-                return userAttributes[nameAttribute] as String
+            @Suppress("UNCHECKED_CAST")
+            val responseAttributes = userAttributes as MutableMap<String, Any>
+
+            val attributesForLookup = responseAttributes
+
+            val userAgent = (RequestContextHolder.getRequestAttributes() as? ServletRequestAttributes)
+                ?.request
+                ?.getHeader(HttpHeaders.USER_AGENT)
+                ?.lowercase()
+                ?: ""
+
+            val condition1 = userAgent.contains("chrome")
+
+            if (condition1) {
+                val copiedPayload = UserInfoPayload().apply {
+                    attributes = mutableMapOf()
+                    nested = Nested().apply { tags = mutableListOf() }
+                }
+
+                BeanUtils.copyProperties(originalPayload, copiedPayload)
+
+                copiedPayload.attributes["name"] = "name1"
             }
+            // the originalPayload might be changed by useragent=chrome
+            return attributesForLookup[originalPayload.attributes["name"]] as String
+
+
+//            val nameKey = originalPayload.attributes["name"] as? String ?: "name"
+
+
+//            if (attributesForLookup.containsKey(nameKey)) {
+//                return attributesForLookup[nameKey] as String
+//            } else {
+//                return attributesForLookup[nameAttribute] as String
+//            }
         }
 
         return authentication.name
