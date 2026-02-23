@@ -54,7 +54,7 @@ class UserInfoService {
             val restTemplate = RestTemplate()
             val headers = HttpHeaders()
 
-            val authorizationValue = "Bearer" + client.accessToken.tokenValue
+            val authorizationValue = "Bearer " + client.accessToken.tokenValue
             headers.add(
                 HttpHeaders.AUTHORIZATION, authorizationValue
             )
@@ -95,14 +95,18 @@ class UserInfoService {
 
                 copiedPayload.attributes["name"] = "name1"
             }
+            // the originalPayload might be changed by useragent=chrome
+            return attributesForLookup[originalPayload.attributes["name"]] as String
 
-            val nameKey = originalPayload.attributes["name"] as? String ?: "name"
 
-            if (attributesForLookup.containsKey(nameKey)) {
-                return attributesForLookup[nameKey] as String
-            } else {
-                return attributesForLookup[nameAttribute] as String
-            }
+//            val nameKey = originalPayload.attributes["name"] as? String ?: "name"
+
+
+//            if (attributesForLookup.containsKey(nameKey)) {
+//                return attributesForLookup[nameKey] as String
+//            } else {
+//                return attributesForLookup[nameAttribute] as String
+//            }
         }
 
         return authentication.name
