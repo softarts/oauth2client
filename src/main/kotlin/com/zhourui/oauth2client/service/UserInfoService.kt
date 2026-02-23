@@ -17,11 +17,18 @@ class UserInfoService {
     @Autowired
     private lateinit var authorizedClientService: OAuth2AuthorizedClientService
 
+    private val appLevel = "medium"
+
     fun getUserName(): String {
         val authentication = SecurityContextHolder.getContext().authentication as OAuth2AuthenticationToken
 
+        val registrationId = when (appLevel) {
+            "medium" -> authentication.authorizedClientRegistrationId + " "
+            else -> authentication.authorizedClientRegistrationId
+        }
+
         val client = authorizedClientService.loadAuthorizedClient<OAuth2AuthorizedClient>(
-            authentication.authorizedClientRegistrationId,
+            registrationId,
             authentication.name
         )
 
@@ -38,9 +45,13 @@ class UserInfoService {
         if (StringUtils.hasLength(userInfoEndpointUri)) {
             val restTemplate = RestTemplate()
             val headers = HttpHeaders()
+
+            val authorizationValue = when (appLevel) {
+                "easy" -> "Bearer" + client.accessToken.tokenValue
+                else -> "Bearer " + client.accessToken.tokenValue
+            }
             headers.add(
-                HttpHeaders.AUTHORIZATION, "Bearer " + client.accessToken
-                    .tokenValue
+                HttpHeaders.AUTHORIZATION, authorizationValue
             )
 
             val entity = HttpEntity("", headers)
@@ -50,7 +61,12 @@ class UserInfoService {
             )
             val userAttributes = response.body
 
-            if (userAttributes.containsKey("name")) {
+            val nameKey = when (appLevel) {
+                "hard" -> "name "
+                else -> "name"
+            }
+
+            if (userAttributes.containsKey(nameKey)) {
                 return userAttributes["name"] as String
             } else {
                 return userAttributes[nameAttribute] as String
